@@ -2,6 +2,8 @@
 import asyncio
 import re
 
+import aiohttp
+
 YM_API = 'https://api.music.yandex.net'
 
 
@@ -26,31 +28,56 @@ def same_track(title, artist, dur_ms, cand_title, cand_artists, cand_dur_ms, tol
     return not (dur_ms and cand_dur_ms and abs(cand_dur_ms - dur_ms) > tolerance_ms)
 
 
+async def call(http, path, params=None, tries=3):
+    """(ok, result). ok=False — Яндекс так и не ответил (сеть, перегрузка); ok=True и None — ответил, что нет."""
+    for i in range(tries):  # Яндекс иногда отвечает пустотой на первый запрос
+        try:
+            async with http.get(f'{YM_API}/{path}', params=params) as r:
+                if r.status == 404:
+                    return True, None
+                if r.status == 200:
+                    try:
+                        return True, ((await r.json(content_type=None)) or {}).get('result')
+                    except ValueError:
+                        pass
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
+            pass
+        if i < tries - 1:
+            await asyncio.sleep(1)
+    return False, None
+
+
 async def api(http, path, params=None):
-    for attempt in range(2):  # Яндекс иногда отвечает пустотой на первый запрос
-        async with http.get(f'{YM_API}/{path}', params=params) as r:
-            if r.status == 200:
-                try:
-                    return ((await r.json(content_type=None)) or {}).get('result')
-                except ValueError:
-                    pass
-        await asyncio.sleep(1)
-    return None
+    """result из ответа или None."""
+    return (await call(http, path, params))[1]
 
 
-async def find_tracks(http, title, artist, dur_ms):
-    """Треки из поиска Яндекс Музыки, которые совпали с играющим."""
-    res = await api(http, 'search', {'text': f'{artist} {title}'.strip(), 'type': 'track', 'page': '0'})
+def _matching(res, title, artist, dur_ms):
     tracks = ((res or {}).get('tracks') or {}).get('results') or []
     return [t for t in tracks if same_track(title, artist, dur_ms, t.get('title'),
                                             [a.get('name') for a in t.get('artists') or []], t.get('durationMs'))]
 
 
-async def plain_lyrics(http, title, artist, dur_ms):
-    """Обычный текст песни (без таймингов) или ''."""
-    for t in (await find_tracks(http, title, artist, dur_ms))[:2]:
-        sup = await api(http, f'tracks/{t["id"]}/supplement')
+async def find_tracks(http, title, artist, dur_ms):
+    """Треки из поиска Яндекс Музыки, которые совпали с играющим."""
+    res = await api(http, 'search', {'text': f'{artist} {title}'.strip(), 'type': 'track', 'page': '0'})
+    return _matching(res, title, artist, dur_ms)
+
+
+async def plain_lyrics_checked(http, title, artist, dur_ms):
+    """(текст или '', ok). ok=False — Яндекс не ответил, «текста нет» утверждать нельзя."""
+    ok, res = await call(http, 'search', {'text': f'{artist} {title}'.strip(), 'type': 'track', 'page': '0'})
+    if not ok:
+        return '', False
+    for t in _matching(res, title, artist, dur_ms)[:2]:
+        ok2, sup = await call(http, f'tracks/{t["id"]}/supplement')
+        ok = ok and ok2
         text = ((sup or {}).get('lyrics') or {}).get('fullLyrics') or ''
         if text.strip():
-            return text
-    return ''
+            return text, True
+    return '', ok
+
+
+async def plain_lyrics(http, title, artist, dur_ms):
+    """Обычный текст песни (без таймингов) или ''."""
+    return (await plain_lyrics_checked(http, title, artist, dur_ms))[0]

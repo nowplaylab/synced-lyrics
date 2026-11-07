@@ -11,7 +11,7 @@
 ## Установка
 
 ```
-pip install git+https://github.com/nowplaylab/synced-lyrics@v0.1.1
+pip install git+https://github.com/nowplaylab/synced-lyrics@v0.2.0
 ```
 
 Python 3.9+, из зависимостей только aiohttp.
@@ -30,7 +30,8 @@ async def main():
         print(lyrics.source)                # 'lrclib', 'yandex' или ''
 ```
 
-- `fetch()` не бросает исключений на ошибках сети: пишет их в лог и возвращает пустой `Lyrics` (ложный).
+- `fetch()` не бросает исключений на ошибках сети. Если сервис перегружен или не отвечает, запрос повторяется несколько раз; если так и не ответил, у результата `lyrics.complete == False`. Пусто и `complete=True` — текста правда нет; пусто и `complete=False` — «не смогли проверить, спросите позже», такой ответ надолго не запоминайте.
+- Названия с приписками вроде `(feat. …)`, `(Prod. by …)` или ` - Remastered 2011` ищутся ещё раз без них (`synced_lyrics.simplify_title()`).
 - `use_yandex=False` отключает запасной вариант.
 - `synced_lyrics.parse_lrc(text)` разбирает любой LRC-текст отдельно.
 - В `synced_lyrics.yandex` есть поиск: `find_tracks()`, `same_track()`, `plain_lyrics()`.
