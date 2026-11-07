@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "synced-lyrics"
-version = "0.1.0"
+version = "0.1.1"
 description = "Time-synced song lyrics from LRCLIB with a Yandex Music fallback, checked against track length"
 readme = "README.md"
 license = {text = "MIT"}

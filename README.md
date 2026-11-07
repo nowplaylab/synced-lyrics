@@ -11,7 +11,7 @@ Made by [nowplaylab](https://github.com/nowplaylab) for [NowPlaying](https://git
 ## Install
 
 ```
-pip install git+https://github.com/nowplaylab/synced-lyrics@v0.1.0
+pip install git+https://github.com/nowplaylab/synced-lyrics@v0.1.1
 ```
 
 Python 3.9+, depends only on aiohttp.

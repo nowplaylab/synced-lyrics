@@ -11,7 +11,7 @@
 ## Установка
 
 ```
-pip install git+https://github.com/nowplaylab/synced-lyrics@v0.1.0
+pip install git+https://github.com/nowplaylab/synced-lyrics@v0.1.1
 ```
 
 Python 3.9+, из зависимостей только aiohttp.

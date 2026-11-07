@@ -9,6 +9,7 @@
 Синхронный текст берётся, только если длительность совпала (±4 с; без исполнителя — ±2 с),
 иначе строки разъедутся с песней (ремикс, live, другая версия).
 """
+import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
@@ -17,7 +18,7 @@ import aiohttp
 
 from . import yandex
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __all__ = ['Lyrics', 'fetch', 'parse_lrc', 'LRCLIB']
 
 log = logging.getLogger('synced_lyrics')
@@ -78,13 +79,13 @@ async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True
     result = Lyrics()
     try:
         result = await from_lrclib(http, title, artist, album, duration_ms, lrclib)
-    except (aiohttp.ClientError, ValueError, OSError) as e:
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, OSError) as e:
         log.warning('lrclib: %s', e)
     if not result and use_yandex:
         try:
             text = await yandex.plain_lyrics(http, title, artist, duration_ms)
             if text:
                 result = Lyrics([], text, 'yandex')
-        except (aiohttp.ClientError, ValueError, OSError) as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, OSError) as e:
             log.warning('yandex lyrics: %s', e)
     return result
