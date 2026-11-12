@@ -4,8 +4,11 @@
     for line in lyrics.synced:      # [{'t': мс, 'text': строка}] — пусто, если таймингов нет
         ...
     lyrics.plain                    # обычный текст (может быть и без синхронного)
-    lyrics.source                   # 'lrclib', 'yandex' или ''
+    lyrics.source                   # 'file', 'lrclib', 'yandex' или ''
     lyrics.complete                 # False — какой-то источник не ответил, стоит спросить позже
+
+Свои файлы: fetch(..., local_dirs=['~/Music/Lyrics']) сначала ищет «Исполнитель - Название.lrc»
+(или .txt) в этих папках, см. synced_lyrics.local.
 
 Синхронный текст берётся, только если длительность совпала (±4 с; без исполнителя — ±2 с),
 иначе строки разъедутся с песней (ремикс, live, другая версия).
@@ -22,8 +25,8 @@ import aiohttp
 
 from . import yandex
 
-__version__ = '0.2.0'
-__all__ = ['Lyrics', 'fetch', 'parse_lrc', 'simplify_title', 'LRCLIB']
+__version__ = '0.3.0'
+__all__ = ['Lyrics', 'fetch', 'parse_lrc', 'simplify_title', 'local', 'LRCLIB']
 
 log = logging.getLogger('synced_lyrics')
 LRCLIB = 'https://lrclib.net/api'
@@ -42,13 +45,18 @@ class Lyrics:
 
 
 def parse_lrc(text):
-    """LRC → [{'t': мс, 'text': строка}] по времени. Строка с несколькими метками повторяется."""
+    """LRC → [{'t': мс, 'text': строка}] по времени. Строка с несколькими метками повторяется.
+    Метка [offset:±мс] сдвигает все строки (плюс — раньше, как в стандарте LRC).
+    Время отдельных слов <мм:сс.xx> внутри строки отбрасывается — остаётся текст строки."""
+    m = re.search(r'^\s*\[offset:\s*([+-]?\d+)\s*\]', text or '', re.M | re.I)
+    offset = int(m.group(1)) if m else 0
     lines = []
     for raw in (text or '').splitlines():
         stamps = re.findall(r'\[(\d+):(\d+(?:\.\d+)?)\]', raw)
-        words = re.sub(r'\[[^\]]*\]', '', raw).strip()
-        for m, s in stamps:
-            lines.append({'t': int((int(m) * 60 + float(s)) * 1000), 'text': words})
+        words = re.sub(r'<\d+:\d+(?:\.\d+)?>', '', re.sub(r'\[[^\]]*\]', '', raw))
+        words = re.sub(r'\s+', ' ', words).strip()
+        for mm, s in stamps:
+            lines.append({'t': max(0, int((int(mm) * 60 + float(s)) * 1000) - offset), 'text': words})
     return sorted(lines, key=lambda l: l['t'])
 
 
@@ -119,9 +127,20 @@ async def from_lrclib(http, title, artist='', album='', duration_ms=0, base=LRCL
     return best
 
 
-async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True, lrclib=LRCLIB):
+async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True, lrclib=LRCLIB, local_dirs=None):
     """Найти текст. http — aiohttp.ClientSession (лучше со своим User-Agent). Ошибки сети не бросает:
-    если источник не ответил даже после повторов, у результата complete=False."""
+    если источник не ответил даже после повторов, у результата complete=False.
+    local_dirs — папки со своими .lrc/.txt: проверяются первыми, без сети (source='file')."""
+    if local_dirs:
+        try:
+            path = await asyncio.get_running_loop().run_in_executor(
+                None, local.find, local_dirs, title, artist, duration_ms)
+            if path:
+                got = local.read(path)
+                if got:
+                    return got
+        except OSError as e:
+            log.warning('local lyrics: %s', e)
     try:
         result = await from_lrclib(http, title, artist, album, duration_ms, lrclib)
     except NET_ERRORS as e:
@@ -137,3 +156,6 @@ async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True
             return Lyrics([], text, 'yandex')
         result.complete = result.complete and ok
     return result
+
+
+from . import local  # noqa: E402  (local использует Lyrics и parse_lrc отсюда)

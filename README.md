@@ -1,6 +1,6 @@
 # synced-lyrics
 
-**English** | [Русский](README.ru.md)
+**English** | [Русский](https://github.com/nowplaylab/synced-lyrics/blob/main/README.ru.md)
 
 Song lyrics with a time for every line, for karaoke-style display. Looks on [LRCLIB](https://lrclib.net) first; if nothing is there, takes plain lyrics from Yandex Music (no account needed).
 
@@ -33,6 +33,8 @@ async def main():
 - `fetch()` never raises on network errors. Busy or failing services are retried a few times; if one still does not answer, you get `lyrics.complete == False`. Empty with `complete=True` means there really are no lyrics; empty with `complete=False` means "could not check, ask again later", so do not cache it for long.
 - Titles with extras like `(feat. …)`, `(Prod. by …)` or ` - Remastered 2011` are searched again without them (`synced_lyrics.simplify_title()`).
 - `use_yandex=False` turns the fallback off.
+- `local_dirs=['~/Music/Lyrics']` checks your own files first, with no network: `Artist - Title.lrc`, `Title - Artist.lrc` or `Title.lrc` (a `.txt` works too, as plain lyrics). A `.lrc` with any name is found by its `[ti:]` and `[ar:]` tags. If the file has `[length:3:34]`, it is used only when the track length matches (within 4 s). `lyrics.source` is then `'file'`. Use `synced_lyrics.local.find()` and `read()` on their own if you like.
+- `parse_lrc()` understands `[offset:±ms]` and drops per-word times (`<00:10.80>`), keeping the line.
 - `synced_lyrics.parse_lrc(text)` parses any LRC text on its own.
 - `synced_lyrics.yandex` has the search helpers: `find_tracks()`, `same_track()`, `plain_lyrics()`.
 - LRCLIB asks clients to send their own User-Agent.

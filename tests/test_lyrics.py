@@ -107,5 +107,48 @@ class LyricsTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(yandex.same_track('Song', 'A', 200000, 'Song', ['A'], 220000))
 
 
+class LocalFilesTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        import tempfile, os
+        self.tmp = tempfile.TemporaryDirectory()
+        d = self.tmp.name
+        os.makedirs(os.path.join(d, 'Кассета'))
+        self.by_name = os.path.join(d, 'Кассета', 'Кассета - Ночной маршрут.lrc')
+        with open(self.by_name, 'w', encoding='utf-8') as f:
+            f.write('[length:3:34]\n[00:06.00]Мы едем по ночному маршруту\n[00:15.40]Пока горит этот свет\n')
+        with open(os.path.join(d, 'track07.lrc'), 'w', encoding='cp1251') as f:   # имя ни о чём, зато метки
+            f.write('[ti:Рассвет]\n[ar:Кассета]\n[offset:500]\n[00:10.00]<00:10.00>Рассвет <00:10.80>догонит\n')
+        with open(os.path.join(d, 'Без времени.txt'), 'w', encoding='utf-8') as f:
+            f.write('Просто текст\nбез таймингов\n')
+        self.dirs = [d]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_find_by_name_tags_and_txt(self):
+        loc = synced_lyrics.local
+        self.assertEqual(loc.find(self.dirs, 'Ночной маршрут', 'Кассета', 214000), self.by_name)
+        self.assertEqual(loc.find(self.dirs, 'НОЧНОЙ  маршрут (Remastered)', 'кассета'), self.by_name)
+        self.assertIsNone(loc.find(self.dirs, 'Ночной маршрут', 'Кассета', 260000))   # другая длина
+        self.assertTrue(loc.find(self.dirs, 'Рассвет', 'Кассета').endswith('track07.lrc'))
+        self.assertIsNone(loc.find(self.dirs, 'Рассвет', 'Другая группа'))
+        self.assertTrue(loc.find(self.dirs, 'Без времени').endswith('.txt'))
+        self.assertIsNone(loc.find(['/нет/такой/папки'], 'Ночной маршрут'))
+
+    def test_read(self):
+        l = synced_lyrics.local.read(synced_lyrics.local.find(self.dirs, 'Рассвет', 'Кассета'))
+        self.assertEqual(l.source, 'file')
+        self.assertEqual(l.synced, [{'t': 9500, 'text': 'Рассвет догонит'}])      # offset и время слов
+        l = synced_lyrics.local.read(synced_lyrics.local.find(self.dirs, 'Без времени'))
+        self.assertEqual((l.synced, l.plain), ([], 'Просто текст\nбез таймингов'))
+
+    async def test_fetch_uses_files_first_without_network(self):
+        async with aiohttp.ClientSession() as http:
+            l = await synced_lyrics.fetch(http, 'Ночной маршрут', 'Кассета', duration_ms=214000,
+                                          lrclib='http://127.0.0.1:9/api', use_yandex=False, local_dirs=self.dirs)
+        self.assertEqual(l.source, 'file')
+        self.assertEqual(l.synced[1], {'t': 15400, 'text': 'Пока горит этот свет'})
+
+
 if __name__ == '__main__':
     unittest.main()
