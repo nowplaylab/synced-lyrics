@@ -11,10 +11,10 @@
 ## Установка
 
 ```
-pip install git+https://github.com/nowplaylab/synced-lyrics@v0.2.0
+pip install lrclib-synced
 ```
 
-Python 3.9+, из зависимостей только aiohttp.
+Python 3.9+, из зависимостей только aiohttp. На PyPI пакет называется **lrclib-synced** (имя `synced-lyrics` там слишком похоже на чужой проект); в коде по-прежнему `import synced_lyrics`.
 
 ## Как пользоваться
 

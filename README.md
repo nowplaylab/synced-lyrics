@@ -11,10 +11,10 @@ Made by [nowplaylab](https://github.com/nowplaylab) for [NowPlaying](https://git
 ## Install
 
 ```
-pip install git+https://github.com/nowplaylab/synced-lyrics@v0.2.0
+pip install lrclib-synced
 ```
 
-Python 3.9+, depends only on aiohttp.
+Python 3.9+, depends only on aiohttp. On PyPI the package is called **lrclib-synced** (`synced-lyrics` is too close to another project there); you still `import synced_lyrics`.
 
 ## Use
 
