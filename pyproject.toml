@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nowplaylab-synced-lyrics"
+name = "lrclib-synced"
 version = "0.3.0"
 description = "Time-synced song lyrics from LRCLIB with a Yandex Music fallback, checked against track length"
 readme = "README.md"
