@@ -1,6 +1,13 @@
-# synced-lyrics
+<p align="center"><a href="https://github.com/nowplaylab/synced-lyrics"><img src="https://raw.githubusercontent.com/nowplaylab/synced-lyrics/main/docs/banner.png" alt="synced-lyrics" width="100%"></a></p>
 
-**English** | [Русский](https://github.com/nowplaylab/synced-lyrics/blob/main/README.ru.md)
+<p align="center"><b>English</b> &nbsp;·&nbsp; <a href="https://github.com/nowplaylab/synced-lyrics/blob/main/README.ru.md">Русский</a> &nbsp;·&nbsp; <a href="https://pypi.org/project/lrclib-synced/">PyPI</a></p>
+
+<p align="center">
+<a href="https://pypi.org/project/lrclib-synced/"><img src="https://img.shields.io/pypi/v/lrclib-synced?style=flat-square&labelColor=3B3C61&color=772556&label=PyPI" alt="PyPI"></a>
+<a href="https://github.com/nowplaylab/synced-lyrics/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/nowplaylab/synced-lyrics/tests.yml?branch=main&style=flat-square&labelColor=3B3C61&label=tests" alt="tests"></a>
+<img src="https://img.shields.io/badge/python-3.9+-55507F?style=flat-square&labelColor=3B3C61" alt="Python 3.9+">
+<a href="https://github.com/nowplaylab/synced-lyrics/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-8B85A7?style=flat-square&labelColor=3B3C61" alt="MIT"></a>
+</p>
 
 Song lyrics with a time for every line, for karaoke-style display. Looks on [LRCLIB](https://lrclib.net) first; if nothing is there, takes plain lyrics from Yandex Music (no account needed).
 
