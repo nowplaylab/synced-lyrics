@@ -66,6 +66,13 @@ class LyricsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(lines, [{'t': 10500, 'text': 'Первая строка'}, {'t': 12000, 'text': 'Припев'},
                                  {'t': 60000, 'text': 'Припев'}])
 
+    def test_parse_lrc_time_formats(self):
+        # [мм:сс:xx] через двоеточие, [мм:сс] без долей и тысячные доли — строки не теряются
+        lines = synced_lyrics.parse_lrc('[00:10:50]Раз\n[00:11]Два\n[00:12.345]Три\n[00:13:05]<00:13:05>Четыре')
+        self.assertEqual(lines, [{'t': 10500, 'text': 'Раз'}, {'t': 11000, 'text': 'Два'},
+                                 {'t': 12345, 'text': 'Три'}, {'t': 13050, 'text': 'Четыре'}])
+        self.assertEqual(synced_lyrics.parse_lrc('[length:3:34]\n[ti:Песня]'), [])   # метки шапки — не строки
+
     async def test_synced(self):
         l = await synced_lyrics.fetch(self.http, 'Песня', 'Исполнитель', duration_ms=200000, lrclib=self.base + '/api')
         self.assertEqual((l.source, len(l.synced), l.synced[0]['text']), ('lrclib', 3, 'Первая строка'))

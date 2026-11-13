@@ -34,7 +34,7 @@ async def main():
 - Titles with extras like `(feat. …)`, `(Prod. by …)` or ` - Remastered 2011` are searched again without them (`synced_lyrics.simplify_title()`).
 - `use_yandex=False` turns the fallback off.
 - `local_dirs=['~/Music/Lyrics']` checks your own files first, with no network: `Artist - Title.lrc`, `Title - Artist.lrc` or `Title.lrc` (a `.txt` works too, as plain lyrics). A `.lrc` with any name is found by its `[ti:]` and `[ar:]` tags. If the file has `[length:3:34]`, it is used only when the track length matches (within 4 s). `lyrics.source` is then `'file'`. Use `synced_lyrics.local.find()` and `read()` on their own if you like.
-- `parse_lrc()` understands `[offset:±ms]` and drops per-word times (`<00:10.80>`), keeping the line.
+- `parse_lrc()` reads times written as `[mm:ss]`, `[mm:ss.xx]` or `[mm:ss:xx]`, understands `[offset:±ms]` and drops per-word times (`<00:10.80>`), keeping the line.
 - `synced_lyrics.parse_lrc(text)` parses any LRC text on its own.
 - `synced_lyrics.yandex` has the search helpers: `find_tracks()`, `same_track()`, `plain_lyrics()`.
 - LRCLIB asks clients to send their own User-Agent.

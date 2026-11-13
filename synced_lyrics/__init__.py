@@ -25,7 +25,7 @@ import aiohttp
 
 from . import yandex
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __all__ = ['Lyrics', 'fetch', 'parse_lrc', 'simplify_title', 'local', 'LRCLIB']
 
 log = logging.getLogger('synced_lyrics')
@@ -44,19 +44,27 @@ class Lyrics:
         return bool(self.synced or self.plain)
 
 
+_STAMP = r'(\d+):(\d+)(?:[.:](\d+))?'   # мм:сс, мм:сс.xx и мм:сс:xx (так пишут некоторые программы)
+
+
+def _stamp_ms(mm, ss, frac):
+    return (int(mm) * 60 + int(ss)) * 1000 + (round(float('0.' + frac) * 1000) if frac else 0)
+
+
 def parse_lrc(text):
     """LRC → [{'t': мс, 'text': строка}] по времени. Строка с несколькими метками повторяется.
+    Время в метке — [мм:сс], [мм:сс.xx] или [мм:сс:xx].
     Метка [offset:±мс] сдвигает все строки (плюс — раньше, как в стандарте LRC).
     Время отдельных слов <мм:сс.xx> внутри строки отбрасывается — остаётся текст строки."""
     m = re.search(r'^\s*\[offset:\s*([+-]?\d+)\s*\]', text or '', re.M | re.I)
     offset = int(m.group(1)) if m else 0
     lines = []
     for raw in (text or '').splitlines():
-        stamps = re.findall(r'\[(\d+):(\d+(?:\.\d+)?)\]', raw)
-        words = re.sub(r'<\d+:\d+(?:\.\d+)?>', '', re.sub(r'\[[^\]]*\]', '', raw))
+        stamps = re.findall(r'\[' + _STAMP + r'\]', raw)
+        words = re.sub(r'<' + _STAMP + '>', '', re.sub(r'\[[^\]]*\]', '', raw))
         words = re.sub(r'\s+', ' ', words).strip()
-        for mm, s in stamps:
-            lines.append({'t': max(0, int((int(mm) * 60 + float(s)) * 1000) - offset), 'text': words})
+        for mm, ss, frac in stamps:
+            lines.append({'t': max(0, _stamp_ms(mm, ss, frac) - offset), 'text': words})
     return sorted(lines, key=lambda l: l['t'])
 
 
