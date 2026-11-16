@@ -9,7 +9,7 @@
 <a href="https://github.com/nowplaylab/synced-lyrics/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-8B85A7?style=flat-square&labelColor=3B3C61" alt="MIT"></a>
 </p>
 
-Song lyrics with a time for every line, for karaoke-style display. Looks on [LRCLIB](https://lrclib.net) first; if nothing is there, takes plain lyrics from Yandex Music (no account needed).
+Song lyrics with line and word timings for karaoke-style display. Supports your own files, the optional Spicy Lyrics API (with your key), [LRCLIB](https://lrclib.net), and Yandex Music as a plain-text fallback.
 
 Timed lyrics are only accepted when the track length matches (within 4 s, or 2 s when the artist is unknown). Otherwise a remix or live version would show lines at the wrong moments; you get plain lyrics instead.
 
@@ -49,3 +49,21 @@ async def main():
 ## Licence
 
 MIT. Not affiliated with LRCLIB or Yandex.
+
+## Spicy Lyrics (0.4.0)
+
+Pass `spicy_key=your_key` to `fetch()` to enable the official [Spicy Lyrics API](https://developers.spicylyrics.org/docs). Order: local files → Spicy → LRCLIB → Yandex. With no key, the existing behaviour is unchanged. Search uses title, artist and duration; only exact matches within 4 seconds are selected. You may pass `spicy_track_id` if you already know the Spotify, ISRC or Apple Music id.
+
+```python
+lyrics = await synced_lyrics.fetch(
+    http, title, artist, duration_ms=duration_ms, spicy_key=your_key,
+)
+```
+
+The key is an explicit argument belonging to the calling application. There is no default or shared application key in this package.
+
+`lyrics.source == 'spicy'` identifies this API; `lyrics.attribution` names the actual provider (Apple Music, Spotify or Spicy Lyrics) and the community uploader/maker when present. Display these credits with the lyrics and link contributor profiles. Do not cache API lyrics longer than 30 days; NowPlaying uses memory only and expires them after 3 days.
+
+Timed lines may additionally contain `end` and `words`: each word/syllable has `t`, `end` (absolute milliseconds), `start`, `stop` (UTF-16 offsets into the line text). `IsPartOfWord` syllables are joined without spaces. Lines with no word timings remain line-synced; no synthetic timings are generated. Static responses remain plain text.
+
+Use your own key. Public native apps require client access with the explicit “no Origin” option; never ship a secret key. Requests have timeouts, errors fall back to the other providers, and rate limits impose a cooldown without immediate retries. This implementation uses the documented API, not the AGPL PulseSync add-on code.

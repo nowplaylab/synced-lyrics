@@ -1,10 +1,11 @@
-"""Тексты песен со временем строк: LRCLIB (синхронный и обычный текст) и запасной — Яндекс Музыка.
+"""Тексты песен: свои файлы, Spicy Lyrics (по ключу), LRCLIB и запасной — Яндекс Музыка.
 
     lyrics = await synced_lyrics.fetch(http, 'Blinding Lights', 'The Weeknd', duration_ms=200040)
     for line in lyrics.synced:      # [{'t': мс, 'text': строка}] — пусто, если таймингов нет
         ...
     lyrics.plain                    # обычный текст (может быть и без синхронного)
-    lyrics.source                   # 'file', 'lrclib', 'yandex' или ''
+    lyrics.source                   # 'file', 'spicy', 'lrclib', 'yandex' или ''
+    lyrics.attribution              # поставщик и авторы синхронизации из Spicy
     lyrics.complete                 # False — какой-то источник не ответил, стоит спросить позже
 
 Свои файлы: fetch(..., local_dirs=['~/Music/Lyrics']) сначала ищет «Исполнитель - Название.lrc»
@@ -25,7 +26,7 @@ import aiohttp
 
 from . import yandex
 
-__version__ = '0.3.1'
+__version__ = '0.4.0'
 __all__ = ['Lyrics', 'fetch', 'parse_lrc', 'simplify_title', 'local', 'LRCLIB']
 
 log = logging.getLogger('synced_lyrics')
@@ -39,6 +40,7 @@ class Lyrics:
     plain: str = ''
     source: str = ''
     complete: bool = True                        # все источники ответили
+    attribution: dict = field(default_factory=dict)  # источник и авторы синхронизации
 
     def __bool__(self):
         return bool(self.synced or self.plain)
@@ -135,7 +137,8 @@ async def from_lrclib(http, title, artist='', album='', duration_ms=0, base=LRCL
     return best
 
 
-async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True, lrclib=LRCLIB, local_dirs=None):
+async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True, lrclib=LRCLIB, local_dirs=None,
+                *, spicy_key='', spicy_track_id='', spicy_base=None):
     """Найти текст. http — aiohttp.ClientSession (лучше со своим User-Agent). Ошибки сети не бросает:
     если источник не ответил даже после повторов, у результата complete=False.
     local_dirs — папки со своими .lrc/.txt: проверяются первыми, без сети (source='file')."""
@@ -149,11 +152,19 @@ async def fetch(http, title, artist='', album='', duration_ms=0, use_yandex=True
                     return got
         except OSError as e:
             log.warning('local lyrics: %s', e)
+    from . import spicy
+    spicy_result = await spicy.fetch(http, title, artist, album, duration_ms, key=spicy_key,
+                                    track_id=spicy_track_id, base=spicy_base or spicy.API)
+    if spicy_result.synced:
+        return spicy_result
     try:
         result = await from_lrclib(http, title, artist, album, duration_ms, lrclib)
     except NET_ERRORS as e:
         log.warning('lrclib: %s', e)
         result = Lyrics(complete=False)
+    if not result and spicy_result:
+        return spicy_result
+    result.complete = result.complete and spicy_result.complete
     if not result and use_yandex:
         try:
             text, ok = await yandex.plain_lyrics_checked(http, title, artist, duration_ms)

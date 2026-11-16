@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lrclib-synced"
-version = "0.3.1"
-description = "Time-synced song lyrics from LRCLIB with a Yandex Music fallback, checked against track length"
+version = "0.4.0"
+description = "Word- and line-synced lyrics from Spicy Lyrics, LRCLIB, local files and Yandex Music"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
